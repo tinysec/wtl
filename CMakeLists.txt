@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 if(NOT DEFINED WTL_VERSION OR WTL_VERSION STREQUAL "")
-    set(WTL_VERSION "9.1.5321")
+    set(WTL_VERSION "10.10.10320")
 endif()
 
 project(wtl VERSION "${WTL_VERSION}" LANGUAGES CXX)
