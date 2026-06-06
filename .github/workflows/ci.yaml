@@ -5,15 +5,15 @@ on:
     branches:
       - master
       - dev
+    tags:
+      - "v*"
   pull_request:
     branches:
       - master
       - dev
 
 env:
-  VERSION_MAJOR: 9
-  VERSION_MINOR: 10
-  VERSION_PATCH: 0
+  WTL_VERSION: 9.1.5321
 
 jobs:
   version:
@@ -25,10 +25,16 @@ jobs:
         id: v
         shell: bash
         run: |
-          BUILD=${{ github.run_number }}
-          VERSION="${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${BUILD}"
+          VERSION="${WTL_VERSION}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match WTL_VERSION ${VERSION}"
+              exit 1
+            fi
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Generated version: ${VERSION}"
+          echo "WTL version: ${VERSION}"
 
   build:
     needs: version
@@ -53,7 +59,7 @@ jobs:
           cat > smoke/CMakeLists.txt <<'EOF'
           cmake_minimum_required(VERSION 3.20)
           project(wtl_smoke LANGUAGES CXX)
-          find_package(wtl CONFIG REQUIRED)
+          find_package(wtl 9.1.5321 EXACT CONFIG REQUIRED)
           add_library(consumer INTERFACE)
           target_link_libraries(consumer INTERFACE wtl::wtl)
           EOF
@@ -78,7 +84,7 @@ jobs:
     needs:
       - version
       - build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -93,7 +99,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         continue-on-error: true
         with:
-          tag_name: v${{ needs.version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
           prerelease: false

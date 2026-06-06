@@ -5,7 +5,8 @@
 
 ## Introduction
 
-`wtl` packages Windows Template Library 9.10 as a CMake header-only dependency.
+`wtl` packages Windows Template Library 9.1.5321 as a CMake header-only
+dependency.
 It does not build a library artifact. The exported CMake target is:
 
 ```cmake
@@ -54,6 +55,12 @@ find_package(wtl CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE wtl::wtl)
 ```
 
+Consumers that need this exact WTL package version can request it explicitly:
+
+```cmake
+find_package(wtl 9.1.5321 EXACT CONFIG REQUIRED)
+```
+
 Point `CMAKE_PREFIX_PATH` at the installation prefix if CMake cannot find it:
 
 ```cmd
@@ -66,7 +73,7 @@ Header-only component libraries that use WTL should depend on `wtl::wtl` instead
 of vendoring their own copy:
 
 ```cmake
-find_package(wtl CONFIG REQUIRED)
+find_package(wtl 9.1.5321 CONFIG REQUIRED)
 
 add_library(component_a INTERFACE)
 add_library(component_a::component_a ALIAS component_a)
