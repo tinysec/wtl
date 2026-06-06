@@ -1,0 +1,204 @@
+name: build
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
+
+env:
+  VERSION_MAJOR: 1
+  VERSION_MINOR: 0
+  VERSION_PATCH: 0
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - name: derive version
+        id: v
+        shell: bash
+        run: |
+          BUILD=${{ github.run_number }}
+          VERSION="${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${BUILD}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Generated version: ${VERSION}"
+
+  build:
+    needs: version
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: i386
+            linkage: static
+            build_shared: OFF
+          - arch: i386
+            linkage: shared
+            build_shared: ON
+          - arch: amd64
+            linkage: static
+            build_shared: OFF
+          - arch: amd64
+            linkage: shared
+            build_shared: ON
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: setup wdk7
+        id: wdk7
+        uses: tinysec/setup-wdk7@v1
+
+      - name: configure wdk7
+        shell: cmd
+        run: |
+          @echo off
+          setlocal EnableExtensions
+          if not "${{ steps.wdk7.outputs.found }}"=="true" (
+            echo setup-wdk7 did not prepare WDK7.
+            exit /b 1
+          )
+          if exist build rmdir /s /q build
+          cmake -S . -B build -G "NMake Makefiles" ^
+            "-DCMAKE_TOOLCHAIN_FILE=cmake/wdk7.cmake" ^
+            -DWDK7_ARCH=${{ matrix.arch }} ^
+            -DHELLO_BUILD_SHARED=${{ matrix.build_shared }} ^
+            -DBUILD_TEST=ON ^
+            -DHELLO_INSTALL=ON ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DHELLO_VERSION=${{ needs.version.outputs.version }}
+          if errorlevel 1 exit /b 1
+
+      - name: build
+        shell: cmd
+        run: |
+          @echo off
+          cmake --build build
+          if errorlevel 1 exit /b 1
+
+      - name: test
+        shell: cmd
+        run: |
+          @echo off
+          ctest --test-dir build --output-on-failure
+          if errorlevel 1 exit /b 1
+
+      - name: package
+        shell: cmd
+        run: |
+          @echo off
+          setlocal EnableExtensions
+          set "VERSION=${{ needs.version.outputs.version }}"
+          set "ARCH=${{ matrix.arch }}"
+          set "LINKAGE=${{ matrix.linkage }}"
+          if exist dist rmdir /s /q dist
+          if exist install rmdir /s /q install
+          mkdir dist
+
+          cmake --install build --prefix install
+          if errorlevel 1 exit /b 1
+
+          tar -a -cf "dist\hello-%ARCH%-%LINKAGE%-v%VERSION%.zip" -C install .
+          if errorlevel 1 exit /b 1
+
+          dir dist
+
+      - name: upload artifacts github
+        if: github.server_url == 'https://github.com'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}-${{ matrix.linkage }}-dist
+          path: dist/*
+          if-no-files-found: error
+
+      - name: upload artifacts gitea
+        if: github.server_url != 'https://github.com'
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-${{ matrix.arch }}-${{ matrix.linkage }}-dist
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs:
+      - version
+      - build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: download i386 static artifacts github
+        if: github.server_url == 'https://github.com'
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-i386-static-dist
+          path: dist
+
+      - name: download i386 shared artifacts github
+        if: github.server_url == 'https://github.com'
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-i386-shared-dist
+          path: dist
+
+      - name: download amd64 static artifacts github
+        if: github.server_url == 'https://github.com'
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64-static-dist
+          path: dist
+
+      - name: download amd64 shared artifacts github
+        if: github.server_url == 'https://github.com'
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64-shared-dist
+          path: dist
+
+      - name: download i386 static artifacts gitea
+        if: github.server_url != 'https://github.com'
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-i386-static-dist
+          path: dist
+
+      - name: download i386 shared artifacts gitea
+        if: github.server_url != 'https://github.com'
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-i386-shared-dist
+          path: dist
+
+      - name: download amd64 static artifacts gitea
+        if: github.server_url != 'https://github.com'
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-amd64-static-dist
+          path: dist
+
+      - name: download amd64 shared artifacts gitea
+        if: github.server_url != 'https://github.com'
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-amd64-shared-dist
+          path: dist
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            dist/*
