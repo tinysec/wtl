@@ -5,7 +5,7 @@
 
 ## Introduction
 
-`wtl` packages Windows Template Library 10.10.10320 as a CMake header-only
+`wtl` packages Windows Template Library 10.0.10320 as a CMake header-only
 dependency.
 It does not build a library artifact. The exported CMake target is:
 
@@ -58,7 +58,7 @@ target_link_libraries(your_target PRIVATE wtl::wtl)
 Consumers that need this exact WTL package version can request it explicitly:
 
 ```cmake
-find_package(wtl 10.10.10320 EXACT CONFIG REQUIRED)
+find_package(wtl 10.0.10320 EXACT CONFIG REQUIRED)
 ```
 
 Point `CMAKE_PREFIX_PATH` at the installation prefix if CMake cannot find it:
@@ -73,7 +73,7 @@ Header-only component libraries that use WTL should depend on `wtl::wtl` instead
 of vendoring their own copy:
 
 ```cmake
-find_package(wtl 10.10.10320 CONFIG REQUIRED)
+find_package(wtl 10.0.10320 CONFIG REQUIRED)
 
 add_library(component_a INTERFACE)
 add_library(component_a::component_a ALIAS component_a)
@@ -120,24 +120,8 @@ prefix:
 ```text
 9.1    -> WTL source from D:\code\wtl-origin\9.1.5321, tag v9.1.5321
 10.01  -> WTL source from D:\code\wtl-origin\10.01, tag v10.01
-10.10  -> WTL source from D:\code\wtl-origin\10.10.10320, tag v10.10.10320
+10.0   -> WTL source from D:\code\wtl-origin\10.0.10320, tag v10.0.10320
 ```
 
-Each branch keeps the same package layout. Only `Include` from the upstream WTL
-source is copied into `include/wtl`; samples and AppWizard files are not part of
-this CMake package.
-
-Import a version into the current branch:
-
-```powershell
-.\tools\import-wtl-version.ps1 -Version 10.10.10320 -SourceRoot D:\code\wtl-origin
-```
-
-Then verify, commit, push the branch, and tag the exact release:
-
-```cmd
-cmake -S . -B build -DWTL_INSTALL=ON
-cmake --install build --prefix install\wtl
-git tag v10.10.10320
-git push github 10.10 v10.10.10320
-```
+Each branch keeps the same package layout. The package contains only WTL
+headers and `license.txt`; samples and AppWizard files are not included.

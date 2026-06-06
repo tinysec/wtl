@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 if(NOT DEFINED WTL_VERSION OR WTL_VERSION STREQUAL "")
-    set(WTL_VERSION "10.10.10320")
+    set(WTL_VERSION "10.0.10320")
 endif()
 
 project(wtl VERSION "${WTL_VERSION}" LANGUAGES CXX)
@@ -32,6 +32,10 @@ if(WTL_INSTALL)
     install(
             DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/wtl/"
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/wtl")
+
+    install(
+            FILES "${CMAKE_CURRENT_SOURCE_DIR}/license.txt"
+            DESTINATION "${CMAKE_INSTALL_DOCDIR}")
 
     install(
             EXPORT wtlTargets
