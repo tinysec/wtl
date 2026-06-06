@@ -111,17 +111,3 @@ and install:
 cmake -S . -B build
 cmake --install build --prefix install\wtl
 ```
-
-## Version Branches
-
-This repository uses one branch per WTL version line, without a `release/`
-prefix:
-
-```text
-9.1    -> WTL source from D:\code\wtl-origin\9.1.5321, tag v9.1.5321
-10.01  -> WTL source from D:\code\wtl-origin\10.01, tag v10.01
-10.0   -> WTL source from D:\code\wtl-origin\10.0.10320, tag v10.0.10320
-```
-
-Each branch keeps the same package layout. The package contains only WTL
-headers and `license.txt`; samples and AppWizard files are not included.
