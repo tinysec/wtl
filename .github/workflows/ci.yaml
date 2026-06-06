@@ -11,7 +11,7 @@ on:
       - "**"
 
 env:
-  WTL_VERSION: 10.0.10320
+  WTL_VERSION: 10.01
 
 jobs:
   version:
