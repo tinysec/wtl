@@ -47,10 +47,3 @@ v10.01
 ```
 
 `master` tracks the latest packaged WTL version.
-
-## Verify
-
-```cmd
-cmake -S . -B build -DWTL_INSTALL=ON
-cmake --install build --prefix install\wtl
-```
