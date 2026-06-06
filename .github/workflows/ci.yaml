@@ -67,17 +67,8 @@ jobs:
           cd "${GITHUB_WORKSPACE}"
           ls -la dist
 
-      - name: upload artifacts github
-        if: github.server_url == 'https://github.com'
+      - name: upload artifacts
         uses: actions/upload-artifact@v4
-        with:
-          name: wtl-dist
-          path: dist/*
-          if-no-files-found: error
-
-      - name: upload artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/upload-artifact@v3
         with:
           name: wtl-dist
           path: dist/*
@@ -92,16 +83,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: download artifacts github
-        if: github.server_url == 'https://github.com'
+      - name: download artifacts
         uses: actions/download-artifact@v4
-        with:
-          name: wtl-dist
-          path: dist
-
-      - name: download artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/download-artifact@v3
         with:
           name: wtl-dist
           path: dist
