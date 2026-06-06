@@ -1,127 +1,106 @@
-# hello
+# wtl
 
-[![build](https://git.tinysec.net/tcode/cmake-library/actions/workflows/ci.yaml/badge.svg)](https://git.tinysec.net/tcode/cmake-library/actions)
-[![arch](https://img.shields.io/badge/arch-i386%20%7C%20amd64-blue)](#wdk7-build)
-[![build](https://img.shields.io/badge/build-CMake%20%7C%20WDK7-blue)](#build)
+[![build](https://github.com/tinysec/wtl/actions/workflows/ci.yaml/badge.svg)](https://github.com/tinysec/wtl/actions)
 [![package](https://img.shields.io/badge/package-FetchContent%20%7C%20find_package-blue)](#use-from-another-cmake-project)
 
 ## Introduction
 
-`hello` is a minimal C library template for CMake projects. It is designed to
-work both as a source dependency through `FetchContent` and as an installed
-CMake config package through `find_package(hello CONFIG REQUIRED)`.
+`wtl` packages Windows Template Library 9.10 as a CMake header-only dependency.
+It does not build a library artifact. The exported CMake target is:
 
-The CMake target is named `hello`. On Unix-like platforms the library artifact
-uses the normal platform prefix, such as `libhello.a` or `libhello.so`. On
-Windows and WDK7 builds the artifacts are `hello.lib` and, for shared builds,
-`hello.dll`.
+```cmake
+wtl::wtl
+```
 
-The library builds as a static library by default. Public CMake options and
-exported compile definitions use the `HELLO_` prefix. Callers can explicitly
-switch to a DLL by setting `HELLO_BUILD_SHARED=ON`.
+Linking this target adds the WTL include directory to consumers, so existing WTL
+includes continue to work:
+
+```cpp
+#include <atlapp.h>
+#include <atlwin.h>
+```
+
+WTL still requires a Windows C++ toolchain with ATL headers available.
 
 ## Use From Another CMake Project
 
 ### FetchContent
 
-Static library, the default:
-
 ```cmake
 include(FetchContent)
 
 FetchContent_Declare(
-        hello
-        GIT_REPOSITORY git@git.tinysec.net:tcode/cmake-library.git
+        wtl
+        GIT_REPOSITORY https://github.com/tinysec/wtl.git
         GIT_TAG master)
-FetchContent_MakeAvailable(hello)
+FetchContent_MakeAvailable(wtl)
 
-target_link_libraries(your_target PRIVATE hello::hello)
-```
-
-DLL build:
-
-```cmake
-include(FetchContent)
-
-set(HELLO_BUILD_SHARED ON CACHE BOOL "Build hello as a DLL")
-
-FetchContent_Declare(
-        hello
-        GIT_REPOSITORY git@git.tinysec.net:tcode/cmake-library.git
-        GIT_TAG master)
-FetchContent_MakeAvailable(hello)
-
-target_link_libraries(your_target PRIVATE hello::hello)
+target_link_libraries(your_target PRIVATE wtl::wtl)
 ```
 
 ### Installed Package
 
-Build and install a static package:
+Build and install the package:
 
 ```cmd
-cmake -S . -B build-static -DHELLO_BUILD_SHARED=OFF -DHELLO_INSTALL=ON
-cmake --build build-static --config Release
-cmake --install build-static --config Release --prefix install\hello-static
-```
-
-Build and install a DLL package:
-
-```cmd
-cmake -S . -B build-shared -DHELLO_BUILD_SHARED=ON -DHELLO_INSTALL=ON
-cmake --build build-shared --config Release
-cmake --install build-shared --config Release --prefix install\hello-shared
+cmake -S . -B build -DWTL_INSTALL=ON
+cmake --install build --prefix install\wtl
 ```
 
 Consumers then use the installed package:
 
 ```cmake
-find_package(hello CONFIG REQUIRED)
-target_link_libraries(your_target PRIVATE hello::hello)
+find_package(wtl CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE wtl::wtl)
 ```
 
-The static or DLL choice is made when `hello` is built and installed. The
-consumer should point `CMAKE_PREFIX_PATH` at the matching installation prefix.
+Point `CMAKE_PREFIX_PATH` at the installation prefix if CMake cannot find it:
+
+```cmd
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:\path\to\install\wtl
+```
+
+## Component Libraries
+
+Header-only component libraries that use WTL should depend on `wtl::wtl` instead
+of vendoring their own copy:
+
+```cmake
+find_package(wtl CONFIG REQUIRED)
+
+add_library(component_a INTERFACE)
+add_library(component_a::component_a ALIAS component_a)
+
+target_include_directories(component_a INTERFACE
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "$<INSTALL_INTERFACE:include>")
+
+target_link_libraries(component_a INTERFACE wtl::wtl)
+```
+
+If the component library is installed as a CMake package, its
+`Config.cmake.in` should forward the dependency:
+
+```cmake
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(wtl CONFIG REQUIRED)
+
+include("${CMAKE_CURRENT_LIST_DIR}/component_aTargets.cmake")
+
+check_required_components("@PROJECT_NAME@")
+```
+
+Applications can then link only the component targets; WTL is pulled in through
+their public interface.
 
 ## Build
 
-Default local build, static library:
+Because this package is header-only, local build verification is just configure
+and install:
 
 ```cmd
 cmake -S . -B build
-cmake --build build --config Release
+cmake --install build --prefix install\wtl
 ```
-
-Build a DLL:
-
-```cmd
-cmake -S . -B build-shared -DHELLO_BUILD_SHARED=ON
-cmake --build build-shared --config Release
-```
-
-## Tests
-
-Tests are disabled by default. Enable them with `BUILD_TEST=ON`.
-
-```cmd
-cmake -S . -B build-test -DBUILD_TEST=ON
-cmake --build build-test --config Release
-ctest --test-dir build-test -C Release --output-on-failure
-```
-
-## WDK7 Build
-
-WDK7 builds use the repository toolchain file. `WDK7_ARCH` accepts `i386` or
-`amd64`.
-
-```cmd
-cmake -S . -B build\wdk7-amd64 -G "NMake Makefiles" ^
-      "-DCMAKE_TOOLCHAIN_FILE=cmake/wdk7.cmake" ^
-      -DWDK7_ARCH=amd64 ^
-      -DHELLO_BUILD_SHARED=ON ^
-      -DBUILD_TEST=ON ^
-      -DCMAKE_BUILD_TYPE=Release
-cmake --build build\wdk7-amd64
-ctest --test-dir build\wdk7-amd64 --output-on-failure
-```
-
-Use `-DHELLO_BUILD_SHARED=OFF` for a static library.

@@ -11,8 +11,8 @@ on:
       - dev
 
 env:
-  VERSION_MAJOR: 1
-  VERSION_MINOR: 0
+  VERSION_MAJOR: 9
+  VERSION_MINOR: 10
   VERSION_PATCH: 0
 
 jobs:
@@ -32,98 +32,45 @@ jobs:
 
   build:
     needs: version
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: i386
-            linkage: static
-            build_shared: OFF
-          - arch: i386
-            linkage: shared
-            build_shared: ON
-          - arch: amd64
-            linkage: static
-            build_shared: OFF
-          - arch: amd64
-            linkage: shared
-            build_shared: ON
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v5
 
-      - name: setup wdk7
-        id: wdk7
-        uses: tinysec/setup-wdk7@v1
-
-      - name: configure wdk7
-        shell: cmd
+      - name: configure
         run: |
-          @echo off
-          setlocal EnableExtensions
-          if not "${{ steps.wdk7.outputs.found }}"=="true" (
-            echo setup-wdk7 did not prepare WDK7.
-            exit /b 1
-          )
-          if exist build rmdir /s /q build
-          cmake -S . -B build -G "NMake Makefiles" ^
-            "-DCMAKE_TOOLCHAIN_FILE=cmake/wdk7.cmake" ^
-            -DWDK7_ARCH=${{ matrix.arch }} ^
-            -DHELLO_BUILD_SHARED=${{ matrix.build_shared }} ^
-            -DBUILD_TEST=ON ^
-            -DHELLO_INSTALL=ON ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DHELLO_VERSION=${{ needs.version.outputs.version }}
-          if errorlevel 1 exit /b 1
+          cmake -S . -B build \
+            -DWTL_INSTALL=ON \
+            -DWTL_VERSION=${{ needs.version.outputs.version }}
 
-      - name: build
-        shell: cmd
+      - name: install
         run: |
-          @echo off
-          cmake --build build
-          if errorlevel 1 exit /b 1
+          cmake --install build --prefix install
 
-      - name: test
-        shell: cmd
+      - name: verify installed package
         run: |
-          @echo off
-          ctest --test-dir build --output-on-failure
-          if errorlevel 1 exit /b 1
+          mkdir -p smoke
+          cat > smoke/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.20)
+          project(wtl_smoke LANGUAGES CXX)
+          find_package(wtl CONFIG REQUIRED)
+          add_library(consumer INTERFACE)
+          target_link_libraries(consumer INTERFACE wtl::wtl)
+          EOF
+          cmake -S smoke -B smoke-build -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install"
 
       - name: package
-        shell: cmd
         run: |
-          @echo off
-          setlocal EnableExtensions
-          set "VERSION=${{ needs.version.outputs.version }}"
-          set "ARCH=${{ matrix.arch }}"
-          set "LINKAGE=${{ matrix.linkage }}"
-          if exist dist rmdir /s /q dist
-          if exist install rmdir /s /q install
-          mkdir dist
+          mkdir -p dist
+          cd install
+          cmake -E tar cf "${GITHUB_WORKSPACE}/dist/wtl-v${{ needs.version.outputs.version }}.zip" --format=zip -- .
+          cd "${GITHUB_WORKSPACE}"
+          ls -la dist
 
-          cmake --install build --prefix install
-          if errorlevel 1 exit /b 1
-
-          tar -a -cf "dist\hello-%ARCH%-%LINKAGE%-v%VERSION%.zip" -C install .
-          if errorlevel 1 exit /b 1
-
-          dir dist
-
-      - name: upload artifacts github
-        if: github.server_url == 'https://github.com'
+      - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.arch }}-${{ matrix.linkage }}-dist
-          path: dist/*
-          if-no-files-found: error
-
-      - name: upload artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/upload-artifact@v3
-        with:
-          name: windows-${{ matrix.arch }}-${{ matrix.linkage }}-dist
+          name: wtl-dist
           path: dist/*
           if-no-files-found: error
 
@@ -136,60 +83,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: download i386 static artifacts github
-        if: github.server_url == 'https://github.com'
+      - name: download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows-i386-static-dist
-          path: dist
-
-      - name: download i386 shared artifacts github
-        if: github.server_url == 'https://github.com'
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-i386-shared-dist
-          path: dist
-
-      - name: download amd64 static artifacts github
-        if: github.server_url == 'https://github.com'
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-amd64-static-dist
-          path: dist
-
-      - name: download amd64 shared artifacts github
-        if: github.server_url == 'https://github.com'
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-amd64-shared-dist
-          path: dist
-
-      - name: download i386 static artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-i386-static-dist
-          path: dist
-
-      - name: download i386 shared artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-i386-shared-dist
-          path: dist
-
-      - name: download amd64 static artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-amd64-static-dist
-          path: dist
-
-      - name: download amd64 shared artifacts gitea
-        if: github.server_url != 'https://github.com'
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-amd64-shared-dist
+          name: wtl-dist
           path: dist
 
       - name: create release
