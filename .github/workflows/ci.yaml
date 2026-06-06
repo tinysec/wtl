@@ -3,14 +3,12 @@ name: build
 on:
   push:
     branches:
-      - master
-      - dev
+      - "**"
     tags:
       - "v*"
   pull_request:
     branches:
-      - master
-      - dev
+      - "**"
 
 env:
   WTL_VERSION: 9.1.5321
@@ -59,7 +57,7 @@ jobs:
           cat > smoke/CMakeLists.txt <<'EOF'
           cmake_minimum_required(VERSION 3.20)
           project(wtl_smoke LANGUAGES CXX)
-          find_package(wtl 9.1.5321 EXACT CONFIG REQUIRED)
+          find_package(wtl ${{ needs.version.outputs.version }} EXACT CONFIG REQUIRED)
           add_library(consumer INTERFACE)
           target_link_libraries(consumer INTERFACE wtl::wtl)
           EOF

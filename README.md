@@ -111,3 +111,33 @@ and install:
 cmake -S . -B build
 cmake --install build --prefix install\wtl
 ```
+
+## Version Branches
+
+This repository uses one branch per WTL version line, without a `release/`
+prefix:
+
+```text
+9.1    -> WTL source from D:\code\wtl-origin\9.1.5321, tag v9.1.5321
+10.01  -> WTL source from D:\code\wtl-origin\10.01, tag v10.01
+10.10  -> WTL source from D:\code\wtl-origin\10.10.10320, tag v10.10.10320
+```
+
+Each branch keeps the same package layout. Only `Include` from the upstream WTL
+source is copied into `include/wtl`; samples and AppWizard files are not part of
+this CMake package.
+
+Import a version into the current branch:
+
+```powershell
+.\tools\import-wtl-version.ps1 -Version 10.10.10320 -SourceRoot D:\code\wtl-origin
+```
+
+Then verify, commit, push the branch, and tag the exact release:
+
+```cmd
+cmake -S . -B build -DWTL_INSTALL=ON
+cmake --install build --prefix install\wtl
+git tag v10.10.10320
+git push github 10.10 v10.10.10320
+```
