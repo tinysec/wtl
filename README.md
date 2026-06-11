@@ -1,11 +1,11 @@
 # wtl
 
 [![build](https://github.com/tinysec/wtl/actions/workflows/ci.yaml/badge.svg)](https://github.com/tinysec/wtl/actions)
-[![package](https://img.shields.io/badge/package-FetchContent-blue)](#use-from-another-cmake-project)
+[![usage](https://img.shields.io/badge/usage-FetchContent-blue)](#use-from-another-cmake-project)
 
 ## Introduction
 
-`wtl` packages Windows Template Library as a local CMake header-only dependency.
+`wtl` exposes Windows Template Library as a local CMake header-only dependency.
 The CMake target is:
 
 ```cmake
@@ -37,7 +37,7 @@ FetchContent_MakeAvailable(wtl)
 target_link_libraries(your_target PRIVATE wtl::wtl)
 ```
 
-Known upstream package tags:
+Known upstream WTL tags:
 
 ```text
 v9.1.5321
@@ -45,4 +45,4 @@ v10.0.10320
 v10.01
 ```
 
-`master` tracks the latest packaged WTL version.
+`master` tracks the latest WTL version carried by this repository.
