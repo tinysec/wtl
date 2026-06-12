@@ -1,10 +1,9 @@
-// Windows Template Library - WTL trace helpers
-// Copyright (C) Microsoft Corporation, WTL Team. All rights reserved.
+// Optional WTL trace helpers for this repository.
 //
-// This file is a part of the Windows Template Library.
-// The use and distribution terms for this software are covered by the
-// Microsoft Public License (http://opensource.org/licenses/MS-PL)
-// which can be found in the file MS-PL.txt at the root folder.
+// This is not an upstream Windows Template Library header. It is a local
+// extension that callers may include explicitly when DebugView-compatible
+// OutputDebugString tracing is needed, including WDK7 builds where ATLTRACE
+// does not reliably emit Win32 debug output.
 
 #ifndef __WTLTRACE_H__
 #define __WTLTRACE_H__
