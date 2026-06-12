@@ -5,7 +5,7 @@
 
 ## Introduction
 
-`wtl` exposes Windows Template Library as a local CMake header-only dependency.
+`wtl` exposes Windows Template Library as a CMake header-only dependency.
 The CMake target is:
 
 ```cmake
@@ -24,18 +24,22 @@ WTL requires a Windows C++ toolchain with ATL headers available.
 
 ## Use From Another CMake Project
 
-Use `FetchContent` with a local checkout:
+Use `FetchContent` to load this repository from GitHub:
 
 ```cmake
 include(FetchContent)
 
 FetchContent_Declare(
         wtl
-        SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../wtl")
+        GIT_REPOSITORY https://github.com/tinysec/wtl.git
+        GIT_TAG v10.01)
 FetchContent_MakeAvailable(wtl)
 
 target_link_libraries(your_target PRIVATE wtl::wtl)
 ```
+
+This repository is intended to be consumed with `FetchContent`; it does not
+provide CMake install or package configuration support.
 
 Known upstream WTL tags:
 
