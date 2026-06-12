@@ -53,7 +53,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: publish build and stable releases
+      - name: publish build release and stable tag
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_TAG: v10.01-build.${{ github.run_number }}
@@ -71,12 +71,8 @@ jobs:
             --title "${BUILD_TAG}" \
             --notes "Automated FetchContent-only WTL ${WTL_VERSION} build ${GITHUB_RUN_NUMBER}."
 
-          gh release delete "${STABLE_TAG}" --yes --cleanup-tag || true
+          gh release delete "${STABLE_TAG}" --yes || true
           git push origin ":refs/tags/${STABLE_TAG}" || true
 
           git tag -f "${STABLE_TAG}" "${GITHUB_SHA}"
           git push origin "refs/tags/${STABLE_TAG}"
-
-          gh release create "${STABLE_TAG}" \
-            --title "${STABLE_TAG}" \
-            --notes "Stable alias for the latest WTL ${WTL_VERSION} build. Current build: ${BUILD_TAG}."
