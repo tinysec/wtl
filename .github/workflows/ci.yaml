@@ -3,39 +3,20 @@ name: build
 on:
   push:
     branches:
-      - "**"
-    tags:
-      - "v*"
+      - master
   pull_request:
     branches:
       - "**"
 
 env:
   WTL_VERSION: 10.01
+  STABLE_TAG: v10.01
+
+permissions:
+  contents: write
 
 jobs:
-  version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.v.outputs.version }}
-    steps:
-      - name: derive version
-        id: v
-        shell: bash
-        run: |
-          VERSION="${WTL_VERSION}"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            TAG_VERSION="${GITHUB_REF_NAME#v}"
-            if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
-              echo "::error::Tag ${GITHUB_REF_NAME} does not match WTL_VERSION ${VERSION}"
-              exit 1
-            fi
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "WTL version: ${VERSION}"
-
   build:
-    needs: version
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -44,7 +25,7 @@ jobs:
       - name: configure
         run: |
           cmake -S . -B build \
-            -DWTL_VERSION=${{ needs.version.outputs.version }}
+            -DWTL_VERSION=${WTL_VERSION}
 
       - name: verify local target
         run: |
@@ -61,3 +42,41 @@ jobs:
           target_link_libraries(consumer INTERFACE wtl::wtl)
           EOF
           cmake -S smoke -B smoke-build
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: publish build and stable releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_TAG: v10.01-build.${{ github.run_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag "${BUILD_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${BUILD_TAG}"
+
+          gh release create "${BUILD_TAG}" \
+            --title "${BUILD_TAG}" \
+            --notes "Automated FetchContent-only WTL ${WTL_VERSION} build ${GITHUB_RUN_NUMBER}."
+
+          gh release delete "${STABLE_TAG}" --yes --cleanup-tag || true
+          git push origin ":refs/tags/${STABLE_TAG}" || true
+
+          git tag -f "${STABLE_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${STABLE_TAG}"
+
+          gh release create "${STABLE_TAG}" \
+            --title "${STABLE_TAG}" \
+            --notes "Stable alias for the latest WTL ${WTL_VERSION} build. Current build: ${BUILD_TAG}."
