@@ -40,8 +40,3 @@ target_link_libraries(your_target PRIVATE wtl::wtl)
 
 This repository is intended to be consumed with `FetchContent`; it does not
 provide CMake install or package configuration support.
-
-`v10.01` is the stable tag for consumers. CI also publishes immutable build tags
-named `v10.01-build.N`; the stable `v10.01` tag is moved to the latest build.
-
-`master` tracks the current contents behind the stable `v10.01` tag.
